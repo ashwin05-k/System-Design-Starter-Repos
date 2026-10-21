@@ -262,4 +262,44 @@ helpdesk-schema-repair/
 │   └── schema.test.sql          ← 36 pgTAP tests — do not edit
 ├── README.md                    ← this file — update with your decisions
 └── package.json                 ← npm scripts — do not edit
+
+
+
+## ERD-to-Schema Decisions
+
+### Decision 1: Column type decision
+
+ERD said: Entity IDs and foreign-key relationships use UUIDs. String fields use TEXT, and timestamp fields use timestamps.
+
+Schema decided: All primary keys and foreign keys use UUID. String fields use TEXT, and timestamp fields use TIMESTAMPTZ.
+
+Reason: These types match the ERD's conceptual types and ensure consistent identifiers and time-zone-aware event timestamps.
+
+### Decision 2: ON DELETE decision
+
+ERD said: Every foreign key must have an explicit ON DELETE behaviour as specified by the assignment's ER diagram and relationship rules.
+
+Schema decided: The schema uses explicit ON DELETE actions. For example, tickets.assignee_id uses SET NULL so deleting an assignee does not delete the ticket. Creator and author references use RESTRICT to preserve accountability.
+
+Reason: The deletion behaviour should protect related records and follow the relationship requirements instead of relying on implicit database defaults.
+
+### Decision 3: Default value decision
+
+ERD said: Creation timestamps are required, while resolved_at and deactivated_at are optional timestamps.
+
+Schema decided: Creation timestamps use TIMESTAMPTZ NOT NULL DEFAULT NOW(). Optional timestamps remain nullable without a default. New tickets use DEFAULT 'open', and comments.internal uses DEFAULT FALSE.
+
+Reason: Required creation times are generated automatically, while optional event timestamps remain NULL until the relevant event occurs.
+
+## Rejected Table Shape
+
+### Shape: tickets.tags TEXT[]
+
+What it was: A tags array column added directly to the tickets table to store multiple tag names in one field.
+
+Why rejected: The ER diagram defines separate Tag and TicketTag entities. The tags and ticket_tags tables represent this relationship explicitly.
+
+What would break: Tag values in an array would not have normal foreign-key validation against tag records. Maintaining tag metadata and consistent references across tickets would also become harder.
+
+
 ```
